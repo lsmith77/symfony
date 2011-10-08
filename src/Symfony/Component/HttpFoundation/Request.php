@@ -1065,7 +1065,7 @@ class Request
      *
      * @param string $header  Header to split
      */
-    public function splitHttpAcceptHeader($header)
+    public function splitHttpAcceptHeader($header, $extended = false)
     {
         if (!$header) {
             return array();
@@ -1073,33 +1073,45 @@ class Request
 
         $values = array();
         foreach (array_filter(explode(',', $header)) as $value) {
-            // Cut off any q-value that might come after a semi-colon
-            if ($pos = strpos($value, ';')) {
-                $q     = (float) trim(substr($value, strpos($value, '=') + 1));
-                $value = trim(substr($value, 0, $pos));
-            } else {
-                $q = 1;
+            $parameters = array();
+            $parts = explode(';', $value);
+            if (count($parts) > 1) {
+                $value = trim(array_shift($parts));
+                foreach ($parts as $part) {
+                    $data = explode('=', $part);
+                    if (2 === count($data)) {
+                        $parameters[trim($data[0])] = trim($data[1]);
+                    }
+                }
             }
 
-            if (0 < $q) {
-                $values[trim($value)] = $q;
+            if (empty($parameters['q'])) {
+                $parameters['q'] = 1;
+            }
+
+            if (0 < $parameters['q']) {
+                $values[trim($value)] = $extended === false
+                    ? $parameters['q'] : $parameters;
             }
         }
 
-        arsort($values);
-        reset($values);
+        if ($extended) {
+            // FIXME
+        } else {
+            arsort($values);
+            reset($values);
+        }
 
         return $values;
     }
 
-    /*
+    /**
      * The following methods are derived from code of the Zend Framework (1.10dev - 2010-01-24)
      *
      * Code subject to the new BSD license (http://framework.zend.com/license/new-bsd).
      *
      * Copyright (c) 2005-2010 Zend Technologies USA Inc. (http://www.zend.com)
      */
-
     protected function prepareRequestUri()
     {
         $requestUri = '';
